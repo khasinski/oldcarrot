@@ -1,5 +1,5 @@
 # oldcarrot with sixel display output
-# Usage: ruby-0.49 oldcarrot_sixel.rb <rom_file> [frames]
+# Usage: ruby-0.49 oldcarrot_sixel.rb <rom_file> [frames] [scale]
 # Requires a sixel-capable terminal (iTerm2, WezTerm, foot, mlterm, xterm +sixel)
 
 $basedir = $0
@@ -19,7 +19,9 @@ load($basedir + "/lib/ppu.rb")
 load($basedir + "/lib/sixel.rb")
 
 if $*.length < 1
-  print("Usage: oldcarrot_sixel.rb <rom_file> [frames]\n")
+  print("Usage: oldcarrot_sixel.rb <rom_file> [frames] [scale]\n")
+  print("  frames: 0 = unlimited (default), N = stop after N frames\n")
+  print("  scale:  pixel scale factor (default: 3)\n")
   exit(1)
 end
 
@@ -28,6 +30,11 @@ if $*.length >= 2
   frames = $*[1].to_i
 else
   frames = 0
+end
+if $*.length >= 3
+  scale = $*[2].to_i
+else
+  scale = 3
 end
 
 cpu = CPU.new()
@@ -52,10 +59,11 @@ pads.reset()
 cpu.boot()
 apu.reset_mapping()
 
-enc = SixelEncoder.new()
+enc = SixelEncoder.new(scale)
 esc = 27.chr
 
-# Hide cursor
+# Clear screen and hide cursor
+$stdout.write(esc + "[2J")
 $stdout.write(esc + "[?25l")
 
 frame = 0

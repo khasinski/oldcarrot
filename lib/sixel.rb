@@ -2,18 +2,21 @@
 # Encodes a 256x240 pixel framebuffer as sixel escape sequences
 
 class SixelEncoder
-  def SixelEncoder.new()
-    super.init()
+  def SixelEncoder.new(scale)
+    super.init(scale)
   end
 
-  def init()
+  def init(scale)
     @esc = 27.chr
+    @scale = scale
     self
   end
 
   # Encode a frame and write sixel to stdout
   # pixels: array of 0xRRGGBB integers, length 256*240
   def encode(pixels)
+    sc = @scale
+
     # 1. Build palette from unique colors
     color_map = {}
     palette = []
@@ -28,7 +31,7 @@ class SixelEncoder
     end
     num_colors = palette.length
 
-    # 2. Build indexed buffer
+    # 2. Build indexed buffer (original 256x240)
     indexed = []
     for i in 0..(pixels.length - 1)
       indexed.push(color_map[pixels[i]])
@@ -46,30 +49,42 @@ class SixelEncoder
     $stdout.write(buf)
 
     # 4. Encode sixel rows
-    for sr in 0..39
-      base_y = sr * 6
+    # Each sixel row covers 6 rows of the SCALED image.
+    # 6 scaled rows = 6/sc source rows (possibly fractional).
+    # We iterate in source-pixel space for efficiency.
+    #
+    # Total scaled height = 240 * sc. Sixel rows = ceil(240*sc / 6).
+    out_height = 240 * sc
+    out_width = 256 * sc
+    total_sixel_rows = (out_height + 5) / 6
 
-      # Pre-compute sixel columns: for each x, build a sixel value per color
-      # sixels[color][x] = 6-bit pattern
+    for sr in 0..(total_sixel_rows - 1)
+      # This sixel row covers scaled Y range [sr*6 .. sr*6+5]
+      # = source Y range [sr*6/sc .. (sr*6+5)/sc]
+      sy_start = sr * 6
+
+      # Build sixel data per color per column
       sixels = []
       for c in 0..(num_colors - 1)
         sixels.push(nil)
       end
 
-      for x in 0..255
+      for src_x in 0..255
         for dy in 0..5
-          y = base_y + dy
-          if y < 240
-            c = indexed[y * 256 + x]
+          sy = sy_start + dy
+          src_y = sy / sc
+          if src_y < 240
+            c = indexed[src_y * 256 + src_x]
             unless sixels[c]
-              sixels[c] = [63] * 256  # '?' = empty (0 bits + 63)
+              sixels[c] = [63] * 256
             end
-            sixels[c][x] = sixels[c][x] + (1 << dy)
+            # Set bit dy for ALL sc columns of this source pixel
+            sixels[c][src_x] = sixels[c][src_x] + (1 << dy)
           end
         end
       end
 
-      # Output each color that has data in this row
+      # Output each color - with horizontal scaling via RLE
       for c in 0..(num_colors - 1)
         row = sixels[c]
         unless row
@@ -78,17 +93,17 @@ class SixelEncoder
 
         buf = sprintf("#%d", c)
 
-        # RLE encode the row
+        # RLE encode with horizontal scale factor
         prev = row[0]
-        run = 1
-        for x in 1..255
-          ch = row[x]
+        run = sc  # first pixel repeated sc times
+        for src_x in 1..255
+          ch = row[src_x]
           if ch == prev
-            run += 1
+            run += sc
           else
             buf = buf + rle(prev, run)
             prev = ch
-            run = 1
+            run = sc
           end
         end
         buf = buf + rle(prev, run) + "$"
