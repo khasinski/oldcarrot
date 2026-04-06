@@ -36,6 +36,16 @@ ruby-0.49 oldcarrot.rb <rom_file> [frames]
 - `rom_file`: path to a .nes ROM file (NROM/mapper 0 only)
 - `frames`: number of frames to run (default: 180)
 
+### Sixel display (terminal graphics)
+
+```
+ruby-0.49 oldcarrot_sixel.rb <rom_file> [frames]
+```
+
+Renders frames directly in the terminal using Sixel graphics at ~3.6 FPS.
+Requires a sixel-capable terminal (iTerm2, WezTerm, foot, mlterm, xterm).
+Pass 0 for frames (or omit) to run indefinitely.
+
 ### Dumping frames
 
 ```
@@ -68,6 +78,7 @@ The emulator is split into components loaded via `load()`:
 | `lib/rom.rb` | iNES ROM loader (NROM mapper 0) | ~160 |
 | `lib/pad.rb` | Game controller input | ~110 |
 | `lib/palette.rb` | Pre-computed 512-color NES palette | ~65 |
+| `lib/sixel.rb` | Sixel graphics encoder for terminal display | ~100 |
 
 ### Key porting decisions
 
