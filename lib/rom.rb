@@ -53,7 +53,6 @@ class ROM
       @mirroring = 1  # vertical
     end
 
-    @battery = flags6[1] == 1
     @mapper = (flags6 >> 4) | (flags7 & 0xf0)
 
     if @mapper != 0
@@ -151,11 +150,4 @@ class ROM
     end
   end
 
-  def load_battery()
-    # Skip battery save for now
-  end
-
-  def save_battery()
-    # Skip battery save for now
-  end
 end

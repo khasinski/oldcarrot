@@ -1,3 +1,5 @@
 frames/
 *.ppm
+*.nes
+*.gif
 /tmp/
